@@ -18,7 +18,7 @@ interface ButterflyChartProps {
   config: ChartConfig;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label, config }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 border border-slate-200 shadow-lg rounded-md text-sm">
@@ -28,9 +28,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
             <span>{entry.name}:</span>
             <span className="font-mono font-bold">
-              {Math.abs(entry.value)}
-              {/* Guess percentage if values are small, otherwise show raw */}
-              {Math.abs(entry.value) <= 100 && (Math.abs(entry.value) % 1 !== 0 || Math.abs(entry.value) < 1) ? '' : '%'}
+              {config?.showAsPercentage ? `${Math.abs(entry.value)}%` : Math.abs(entry.value)}
             </span>
           </div>
         ))}
@@ -98,7 +96,7 @@ export const ButterflyChart: React.FC<ButterflyChartProps> = ({ data, config }) 
         fontWeight={600}
         className="font-semibold"
       >
-        {absValue}%
+        {config.showAsPercentage ? `${absValue}%` : absValue.toString()}
       </text>
     );
   };
@@ -141,7 +139,7 @@ export const ButterflyChart: React.FC<ButterflyChartProps> = ({ data, config }) 
               interval={0}
             />
             
-            <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(0,0,0,0.05)'}} />
+            <Tooltip content={<CustomTooltip config={config} />} cursor={{fill: 'rgba(0,0,0,0.05)'}} />
             
             <ReferenceLine x={0} stroke="#333" />
 

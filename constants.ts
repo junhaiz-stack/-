@@ -9,6 +9,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
   rightColor: "#95d15c", // Lighter Green
   showGrid: true,
   showValues: true,
+  showAsPercentage: true,
   barSize: 30,
   gap: 10,
 };

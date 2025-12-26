@@ -14,6 +14,7 @@ export interface ChartConfig {
   rightColor: string;
   showGrid: boolean;
   showValues: boolean;
+  showAsPercentage: boolean;
   barSize: number;
   gap: number;
 }

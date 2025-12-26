@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ButterflyChart } from './components/ButterflyChart';
 import { ChartConfig, DataPoint } from './types';
 import { DEFAULT_CONFIG, DEFAULT_DATA, EXAMPLE_DATA_CSV } from './constants';
@@ -10,6 +10,7 @@ export default function App() {
   const [config, setConfig] = useState<ChartConfig>(DEFAULT_CONFIG);
   const [inputText, setInputText] = useState<string>(EXAMPLE_DATA_CSV);
   const [activeTab, setActiveTab] = useState<'editor' | 'settings'>('editor');
+  const chartContainerRef = useRef<HTMLDivElement>(null);
 
   // Sync Input Text when Data changes externally (e.g. reset)
   useEffect(() => {
@@ -36,6 +37,120 @@ export default function App() {
     setConfig(DEFAULT_CONFIG);
   };
 
+  const handleExportScreenshot = async () => {
+    if (!chartContainerRef.current) return;
+
+    try {
+      // 查找包含图表的容器
+      const chartWrapper = chartContainerRef.current;
+      const svgElement = chartWrapper.querySelector('svg');
+      
+      if (!svgElement) {
+        alert('无法找到图表元素');
+        return;
+      }
+
+      // 获取SVG的尺寸
+      const svgRect = svgElement.getBoundingClientRect();
+      const svgWidth = svgRect.width || parseInt(svgElement.getAttribute('width') || '800');
+      const svgHeight = svgRect.height || parseInt(svgElement.getAttribute('height') || '450');
+
+      // 序列化SVG
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      
+      // 添加XML声明和命名空间（如果需要）
+      const svgWithDeclaration = `<?xml version="1.0" encoding="UTF-8"?>${svgData}`;
+      
+      // 创建SVG Blob
+      const svgBlob = new Blob([svgWithDeclaration], { type: 'image/svg+xml;charset=utf-8' });
+      const svgUrl = URL.createObjectURL(svgBlob);
+
+      // 创建Image对象
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) {
+        // 如果Canvas不可用，直接下载SVG
+        const link = document.createElement('a');
+        link.href = svgUrl;
+        link.download = `butterfly-chart-${new Date().getTime()}.svg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(svgUrl);
+        return;
+      }
+
+      // 设置canvas尺寸
+      canvas.width = svgWidth;
+      canvas.height = svgHeight;
+
+      img.onload = () => {
+        try {
+          // 绘制白色背景
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // 绘制SVG图像
+          ctx.drawImage(img, 0, 0);
+
+          // 转换为blob并下载
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              // 如果PNG导出失败，尝试下载SVG
+              const link = document.createElement('a');
+              link.href = svgUrl;
+              link.download = `butterfly-chart-${new Date().getTime()}.svg`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(svgUrl);
+              return;
+            }
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `butterfly-chart-${new Date().getTime()}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            URL.revokeObjectURL(svgUrl);
+          }, 'image/png', 1.0);
+        } catch (error) {
+          console.error('绘制失败:', error);
+          // 备用：直接下载SVG
+          const link = document.createElement('a');
+          link.href = svgUrl;
+          link.download = `butterfly-chart-${new Date().getTime()}.svg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(svgUrl);
+        }
+      };
+
+      img.onerror = () => {
+        // 如果图片加载失败，直接下载SVG
+        const link = document.createElement('a');
+        link.href = svgUrl;
+        link.download = `butterfly-chart-${new Date().getTime()}.svg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(svgUrl);
+      };
+
+      // 设置图片源
+      img.src = svgUrl;
+    } catch (error) {
+      console.error('导出失败:', error);
+      alert('导出失败，请重试。如果问题持续，请尝试使用浏览器的截图功能。');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
@@ -56,7 +171,10 @@ export default function App() {
             >
                 <RotateCcw size={16} /> Reset
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors shadow-sm">
+            <button 
+                onClick={handleExportScreenshot}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors shadow-sm"
+            >
                 <Download size={16} /> Export (Screenshot)
             </button>
         </div>
@@ -186,6 +304,15 @@ export default function App() {
                                 />
                             </div>
                             <div className="flex items-center justify-between">
+                                <label className="text-sm text-slate-600">Show as Percentage</label>
+                                <input 
+                                    type="checkbox"
+                                    checked={config.showAsPercentage}
+                                    onChange={(e) => handleConfigChange('showAsPercentage', e.target.checked)}
+                                    className="rounded text-orange-600 focus:ring-orange-500"
+                                />
+                            </div>
+                            <div className="flex items-center justify-between">
                                 <label className="text-sm text-slate-600">Show Grid Lines</label>
                                 <input 
                                     type="checkbox"
@@ -224,7 +351,7 @@ export default function App() {
 
         {/* Chart Preview Area */}
         <section className="flex-1 bg-slate-50 p-4 lg:p-8 flex items-center justify-center overflow-auto">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:p-12 w-full max-w-6xl min-h-[500px] flex flex-col justify-center">
+            <div ref={chartContainerRef} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:p-12 w-full max-w-6xl min-h-[500px] flex flex-col justify-center">
                 <ButterflyChart data={data} config={config} />
             </div>
         </section>
