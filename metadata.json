@@ -1,0 +1,5 @@
+{
+  "name": "Butterfly Chart Generator",
+  "description": "A professional tool to generate Butterfly (Tornado) charts for comparing two datasets, perfect for population pyramids or financial comparisons.",
+  "requestFramePermissions": []
+}
