@@ -60,36 +60,43 @@ export const ButterflyChart: React.FC<ButterflyChartProps> = ({ data, config }) 
       max = Math.max(max, Math.abs(d.leftValue), Math.abs(d.rightValue));
     });
     // Add some padding
-    return Math.ceil(max * 1.1);
+    return Math.ceil(max * 1.3);
   }, [processedData]);
 
-  const yAxisWidth = 120; // Fixed width for labels to align nicely
+  const yAxisWidth = 150; // Fixed width for labels to align nicely
 
   // Value formatter for the axis ticks (remove negative sign)
   const formatTick = (val: number) => Math.abs(val).toString();
 
-  // Custom Label to render absolute values inside or outside bars
+  // Custom Label to render absolute values outside bars
   const renderCustomLabel = (props: any) => {
     const { x, y, width, height, value } = props;
     const absValue = Math.abs(value);
     
-    // Determine position based on which side (negative/positive)
-    // For negative (left side), x is the left edge of the bar. 
-    // For positive (right side), x is the left edge (starts at 0 approx).
+    // For vertical bar chart with negative values (left side):
+    // - x is the right edge of the bar (near center line 0)
+    // - width is negative (bar extends leftward)
+    // - x + width gives the left edge of the bar
+    // For positive values (right side):
+    // - x is the left edge of the bar (near center line 0)
+    // - width is positive (bar extends rightward)
     
-    // Simple heuristic: if value is negative (Left bar), place text to the left of the bar end.
-    // However, Recharts LabelList positioning is tricky with negative bars.
-    // Let's rely on standard offset.
+    // Calculate position outside the bar with proper spacing
+    const spacing = 3; // Space between bar and label
+    const labelX = value < 0 
+      ? x + width - spacing  // Left side: position to the left of the bar's left edge
+      : x + width + spacing; // Right side: position to the right of the bar's right edge
     
     return (
       <text 
-        x={value < 0 ? x - 5 : x + width + 5} 
+        x={labelX}
         y={y + height / 2} 
-        fill="#555" 
+        fill="#475569" 
         textAnchor={value < 0 ? "end" : "start"} 
         dominantBaseline="middle"
-        fontSize={12}
-        className="font-medium"
+        fontSize={13}
+        fontWeight={600}
+        className="font-semibold"
       >
         {absValue}%
       </text>
@@ -107,13 +114,13 @@ export const ButterflyChart: React.FC<ButterflyChartProps> = ({ data, config }) 
       </div>
 
       {/* Chart Container */}
-      <div className="relative w-full h-[400px]">
+      <div className="relative w-full h-[450px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             layout="vertical"
             data={processedData}
             stackOffset="sign"
-            margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+            margin={{ top: 20, right: 60, left: 20, bottom: 20 }}
             barCategoryGap={config.gap}
           >
             {config.showGrid && <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} stroke="#e5e7eb" />}
@@ -147,7 +154,7 @@ export const ButterflyChart: React.FC<ButterflyChartProps> = ({ data, config }) 
               isAnimationActive={true}
               stackId="butterfly"
             >
-               {config.showValues && <LabelList dataKey="displayLeft" content={renderCustomLabel} position="left" />}
+               {config.showValues && <LabelList dataKey="displayLeft" content={renderCustomLabel} />}
             </Bar>
 
             {/* Right Bar (Positive) */}
@@ -159,7 +166,7 @@ export const ButterflyChart: React.FC<ButterflyChartProps> = ({ data, config }) 
               isAnimationActive={true}
               stackId="butterfly"
             >
-               {config.showValues && <LabelList dataKey="displayRight" content={renderCustomLabel} position="right" />}
+               {config.showValues && <LabelList dataKey="displayRight" content={renderCustomLabel} />}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
